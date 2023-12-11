@@ -28,13 +28,22 @@
 #include <signal.h>
 #include <pwd.h>
 #include <errno.h>
-#include <error.h>
+#ifdef __GLIBC__
+# include <error.h>
+#else // Consider musl
+# define program_invocation_short_name __progname
+extern char *__progname;
+# include <err.h>
+# define error(status, errnum, ...) err(status, __VA_ARGS__)
+#endif
 
+#ifdef __GLIBC__
 static void
 my_error_print_progname(void)
 {
 	fprintf(stderr, "%s: ", program_invocation_short_name);
 }
+#endif
 
 static inline void
 clear(void)
@@ -66,7 +75,9 @@ main(int argc, char ** argv)
 	int noclear = 0;
 	struct passwd *pw = NULL;
 
+#ifdef __GLIBC__
 	error_print_progname = my_error_print_progname;
+#endif
 
 	if (argc < 2)
 		error(EXIT_FAILURE, 0, "Usage: %s <uid>", program_invocation_short_name);

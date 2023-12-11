@@ -42,8 +42,17 @@
 #include <grp.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <error.h>
-
+#ifdef __GLIBC__
+# include <error.h>
+#else // Consider musl
+# define program_invocation_short_name __progname
+extern char *__progname;
+// logging.h defined err() function thus let's not use err.h from musl and
+// define our error() function which will use verr() from musl.
+# include <stdarg.h>
+_Noreturn void verr(int status, const char *fmt, va_list ap);
+_Noreturn static void error(int status, int errnum __attribute__((unused)), const char *fmt, ...);
+#endif
 #include "logging.h"
 #include "pidfile.h"
 #include "epoll.h"
@@ -74,6 +83,15 @@ static struct option long_options[] = {
 	{ "version", no_argument, 0, 'V' },
 	{ 0, 0, 0, 0 }
 };
+
+#ifndef __GLIBC__
+_Noreturn static void error(int status, int errnum __attribute__((unused)), const char *fmt, ...) {
+	va_list ap;
+	va_start(ap, fmt);
+	verr(status, fmt, ap);
+	va_end(ap);
+}
+#endif
 
 static void __attribute__((noreturn))
 print_help(int ret)
@@ -106,11 +124,13 @@ print_version(void)
 	exit(EXIT_SUCCESS);
 }
 
+#ifdef __GLIBC__
 static void
 my_error_print_progname(void)
 {
 	fprintf(stderr, "%s: ", program_invocation_short_name);
 }
+#endif
 
 static int
 handle_signal(uint32_t signo)
@@ -225,7 +245,9 @@ int main(int argc, char **argv)
 	int fd_signal = -1;
 	int fd_conn   = -1;
 
+#ifdef __GLIBC__
 	error_print_progname = my_error_print_progname;
+#endif
 
 	while ((i = getopt_long(argc, argv, "fhVg:p:l:", long_options, NULL)) != -1) {
 		switch (i) {
