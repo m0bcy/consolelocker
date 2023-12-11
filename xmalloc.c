@@ -21,7 +21,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <errno.h>
-#include <error.h>
+#ifdef __GLIBC__
+# include <error.h>
+#else
+# include <err.h>
+# define error(status, errnum, ...) err(status, __VA_ARGS__)
+#endif
 #include <limits.h>
 
 #include "xmalloc.h"

@@ -17,6 +17,15 @@
 #ifndef _SOCKETS_H_
 #define _SOCKETS_H_
 
+#ifndef __GLIBC__
+# define TEMP_FAILURE_RETRY(expression) \
+  (__extension__							      \
+    ({ long int __result;						      \
+       do __result = (long int) (expression);				      \
+       while (__result == -1L && errno == EINTR);			      \
+       __result; }))
+#endif
+
 int unix_listen(const char *, const char *);
 int unix_connect(const char *, const char *);
 
